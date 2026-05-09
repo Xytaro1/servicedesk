@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-panel">
+    <div class="d-flex justify-content-between align-items-start gap-3">
+        <div>
+            <h1>{{ ticket.title }}</h1>
+            <p class="text-muted mb-0">
+                Создана {{ ticket.created_date.strftime("%d.%m.%Y %H:%M") }}
+            </p>
+        </div>
+        <span class="badge text-bg-primary">{{ ticket.status }}</span>
+    </div>
+
+    <hr>
+
+    <p><b>Категория:</b> {{ ticket.category }}</p>
+    <p><b>Приоритет:</b> {{ ticket.priority }}</p>
+    <p><b>Описание:</b></p>
+    <p class="ticket-text">{{ ticket.text }}</p>
+
+    <a class="btn btn-outline-primary" href="{{ url_for('tickets') }}">Назад к списку</a>
+</section>
+{% endblock %}

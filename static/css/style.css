@@ -1,0 +1,34 @@
+body {
+    background: #f5f7fb;
+}
+
+h1 {
+    margin-bottom: 20px;
+}
+
+.page-panel,
+.form-box {
+    background: #ffffff;
+    border: 1px solid #dde3ee;
+    border-radius: 8px;
+    padding: 24px;
+}
+
+.form-box {
+    max-width: 520px;
+}
+
+.wide-form {
+    max-width: 760px;
+}
+
+.ticket-card {
+    height: 100%;
+    border-radius: 8px;
+}
+
+.form-error {
+    color: #b00020;
+    font-size: 14px;
+    margin-top: 4px;
+}

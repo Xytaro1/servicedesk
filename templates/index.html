@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-panel">
+    <h1>ServiceDesk</h1>
+    <p class="lead">
+        Простое веб-приложение для создания и просмотра заявок
+        в службу поддержки.
+    </p>
+    {% if current_user.is_authenticated %}
+        <a class="btn btn-primary" href="{{ url_for('new_ticket') }}">Создать заявку</a>
+        <a class="btn btn-outline-primary" href="{{ url_for('tickets') }}">Мои заявки</a>
+    {% else %}
+        <a class="btn btn-primary" href="{{ url_for('register') }}">Зарегистрироваться</a>
+        <a class="btn btn-outline-primary" href="{{ url_for('login') }}">Войти</a>
+    {% endif %}
+</section>
+{% endblock %}
