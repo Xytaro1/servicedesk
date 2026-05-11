@@ -16,9 +16,46 @@
 
     <p><b>Категория:</b> {{ ticket.category }}</p>
     <p><b>Приоритет:</b> {{ ticket.priority }}</p>
+    {% if current_user.is_admin %}
+        <p><b>Автор:</b> {{ ticket.user.name }} ({{ ticket.user.email }})</p>
+    {% endif %}
     <p><b>Описание:</b></p>
     <p class="ticket-text">{{ ticket.text }}</p>
 
-    <a class="btn btn-outline-primary" href="{{ url_for('tickets') }}">Назад к списку</a>
+    {% if ticket.file_name %}
+        <p>
+            <b>Файл:</b>
+            <a href="{{ url_for('static', filename='uploads/' + ticket.file_name) }}"
+               target="_blank">
+                {{ ticket.file_name }}
+            </a>
+        </p>
+    {% endif %}
+
+    {% if current_user.is_admin %}
+        <hr>
+        <form class="row g-2 align-items-end mb-3"
+              method="post"
+              action="{{ url_for('update_ticket_status', ticket_id=ticket.id) }}">
+            {{ form.hidden_tag() }}
+            <div class="col-md-4">
+                {{ form.status.label(class="form-label") }}
+                {{ form.status(class="form-select") }}
+            </div>
+            <div class="col-md-2">
+                {{ form.submit(class="btn btn-primary w-100") }}
+            </div>
+        </form>
+
+        <form method="post"
+              action="{{ url_for('delete_ticket', ticket_id=ticket.id) }}">
+            {{ delete_form.hidden_tag() }}
+            {{ delete_form.submit(class="btn btn-danger") }}
+        </form>
+    {% endif %}
+
+    <a class="btn btn-outline-primary mt-3" href="{{ url_for('tickets') }}">
+        Назад к списку
+    </a>
 </section>
 {% endblock %}

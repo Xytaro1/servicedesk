@@ -1,4 +1,5 @@
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileAllowed, FileField
 from wtforms import EmailField, PasswordField, SelectField, StringField
 from wtforms import SubmitField, TextAreaField
 from wtforms.validators import DataRequired, Email, EqualTo, Length
@@ -53,4 +54,31 @@ class TicketForm(FlaskForm):
         ],
         validators=[DataRequired()]
     )
+    file = FileField(
+        "Файл",
+        validators=[
+            FileAllowed(
+                ["png", "jpg", "jpeg", "pdf", "txt"],
+                "Можно загрузить только png, jpg, jpeg, pdf или txt."
+            )
+        ]
+    )
     submit = SubmitField("Создать заявку")
+
+
+class StatusForm(FlaskForm):
+    status = SelectField(
+        "Статус",
+        choices=[
+            ("Новая", "Новая"),
+            ("В работе", "В работе"),
+            ("Решена", "Решена"),
+            ("Закрыта", "Закрыта"),
+        ],
+        validators=[DataRequired()]
+    )
+    submit = SubmitField("Сохранить")
+
+
+class DeleteForm(FlaskForm):
+    submit = SubmitField("Удалить")

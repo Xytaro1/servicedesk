@@ -11,6 +11,7 @@ class User(db.Model, UserMixin):
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
+    is_admin = db.Column(db.Boolean, nullable=False, default=False)
 
     tickets = db.relationship("Ticket", backref="user", lazy=True)
 
@@ -28,6 +29,7 @@ class Ticket(db.Model):
     category = db.Column(db.String(80), nullable=False)
     priority = db.Column(db.String(30), nullable=False)
     status = db.Column(db.String(30), nullable=False, default="Новая")
+    file_name = db.Column(db.String(200))
     created_date = db.Column(db.DateTime, default=datetime.now)
 
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)

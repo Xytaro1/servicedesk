@@ -3,7 +3,7 @@
 {% block content %}
 <div class="form-box wide-form">
     <h1>Новая заявка</h1>
-    <form method="post" novalidate>
+    <form method="post" enctype="multipart/form-data" novalidate>
         {{ form.hidden_tag() }}
 
         <div class="mb-3">
@@ -31,6 +31,14 @@
             {{ form.priority.label(class="form-label") }}
             {{ form.priority(class="form-select") }}
             {% for error in form.priority.errors %}
+                <div class="form-error">{{ error }}</div>
+            {% endfor %}
+        </div>
+        <div class="mb-3">
+            {{ form.file.label(class="form-label") }}
+            {{ form.file(class="form-control") }}
+            <div class="form-text">Разрешены png, jpg, jpeg, pdf, txt.</div>
+            {% for error in form.file.errors %}
                 <div class="form-error">{{ error }}</div>
             {% endfor %}
         </div>

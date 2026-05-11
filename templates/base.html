@@ -20,6 +20,9 @@
                     <a class="nav-link" href="{{ url_for('profile') }}">Кабинет</a>
                     <a class="nav-link" href="{{ url_for('tickets') }}">Мои заявки</a>
                     <a class="nav-link" href="{{ url_for('new_ticket') }}">Создать заявку</a>
+                    {% if current_user.is_admin %}
+                        <a class="nav-link" href="{{ url_for('admin') }}">Админ-панель</a>
+                    {% endif %}
                     <a class="nav-link" href="{{ url_for('logout') }}">Выход</a>
                 {% else %}
                     <a class="nav-link" href="{{ url_for('login') }}">Вход</a>
