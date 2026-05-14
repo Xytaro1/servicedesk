@@ -1,7 +1,8 @@
 from functools import wraps
 from pathlib import Path
 
-from flask import Flask, abort, flash, redirect, render_template, url_for
+from flask import Flask, abort, flash, jsonify, redirect, render_template
+from flask import request, url_for
 from flask_login import LoginManager, current_user, login_required
 from flask_login import login_user, logout_user
 from sqlalchemy import inspect, text
@@ -67,6 +68,51 @@ def save_ticket_file(file, ticket):
     return name
 
 
+def ticket_to_dict(ticket):
+    return {
+        "id": ticket.id,
+        "title": ticket.title,
+        "text": ticket.text,
+        "category": ticket.category,
+        "priority": ticket.priority,
+        "status": ticket.status,
+        "admin_answer": ticket.admin_answer or "",
+        "file_name": ticket.file_name,
+        "created_date": ticket.created_date.isoformat(),
+        "user_id": ticket.user_id,
+        "user": {
+            "id": ticket.user.id,
+            "name": ticket.user.name,
+            "email": ticket.user.email,
+        },
+    }
+
+
+def api_error(message, status):
+    return jsonify({"error": message}), status
+
+
+def api_login_required(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return api_error("Authentication required", 401)
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+def can_open_ticket(ticket):
+    return current_user.is_admin or ticket.user_id == current_user.id
+
+
+def delete_ticket_file(ticket):
+    if ticket.file_name:
+        file = app.config["UPLOAD_FOLDER"] / ticket.file_name
+        if file.exists():
+            file.unlink()
+
+
 @app.route("/")
 def index():
     return render_template("index.html", title="ServiceDesk")
@@ -88,11 +134,10 @@ def register():
                 form=form
             )
 
-        is_first_user = User.query.count() == 0
         user = User(
             name=form.name.data,
             email=form.email.data,
-            is_admin=is_first_user
+            is_admin=form.role.data == "admin"
         )
         user.set_password(form.password.data)
         db.session.add(user)
@@ -130,6 +175,13 @@ def logout():
 @app.route("/profile")
 @login_required
 def profile():
+    if current_user.is_admin:
+        return render_template(
+            "profile.html",
+            title="Личный кабинет",
+            tickets_count=0
+        )
+
     tickets_count = Ticket.query.filter_by(user_id=current_user.id).count()
     return render_template(
         "profile.html",
@@ -156,6 +208,9 @@ def tickets():
 @app.route("/tickets/new", methods=["GET", "POST"])
 @login_required
 def new_ticket():
+    if current_user.is_admin:
+        abort(403)
+
     form = TicketForm()
     if form.validate_on_submit():
         ticket = Ticket(
@@ -164,6 +219,7 @@ def new_ticket():
             category=form.category.data,
             priority=form.priority.data,
             status="Новая",
+            admin_answer="",
             user_id=current_user.id
         )
         db.session.add(ticket)
@@ -202,14 +258,17 @@ def ticket_detail(ticket_id):
     if not ticket:
         abort(404)
 
-    if not current_user.is_admin and ticket.user_id != current_user.id:
-        abort(404)
+    if not can_open_ticket(ticket):
+        abort(403)
 
     return render_template(
         "ticket_detail.html",
         title=ticket.title,
         ticket=ticket,
-        form=StatusForm(status=ticket.status),
+        form=StatusForm(
+            status=ticket.status,
+            admin_answer=ticket.admin_answer
+        ),
         delete_form=DeleteForm()
     )
 
@@ -221,7 +280,10 @@ def admin():
     tickets = Ticket.query.order_by(Ticket.created_date.desc()).all()
     forms = {}
     for ticket in tickets:
-        forms[ticket.id] = StatusForm(status=ticket.status)
+        forms[ticket.id] = StatusForm(
+            status=ticket.status,
+            admin_answer=ticket.admin_answer
+        )
 
     return render_template(
         "admin.html",
@@ -243,8 +305,9 @@ def update_ticket_status(ticket_id):
     form = StatusForm()
     if form.validate_on_submit():
         ticket.status = form.status.data
+        ticket.admin_answer = form.admin_answer.data or ""
         db.session.commit()
-        flash("Статус заявки обновлен.")
+        flash("Заявка обновлена.")
 
     return redirect(url_for("admin"))
 
@@ -259,16 +322,115 @@ def delete_ticket(ticket_id):
 
     form = DeleteForm()
     if form.validate_on_submit():
-        if ticket.file_name:
-            file = app.config["UPLOAD_FOLDER"] / ticket.file_name
-            if file.exists():
-                file.unlink()
-
+        delete_ticket_file(ticket)
         db.session.delete(ticket)
         db.session.commit()
         flash("Заявка удалена.")
 
     return redirect(url_for("admin"))
+
+
+@app.route("/api/tickets", methods=["GET"])
+@api_login_required
+def api_tickets():
+    if current_user.is_admin:
+        tickets = Ticket.query.order_by(Ticket.created_date.desc()).all()
+    else:
+        tickets = Ticket.query.filter_by(
+            user_id=current_user.id
+        ).order_by(Ticket.created_date.desc()).all()
+
+    return jsonify([ticket_to_dict(ticket) for ticket in tickets])
+
+
+@app.route("/api/tickets/<int:ticket_id>", methods=["GET"])
+@api_login_required
+def api_ticket_detail(ticket_id):
+    ticket = db.session.get(Ticket, ticket_id)
+    if not ticket:
+        return api_error("Ticket not found", 404)
+
+    if not can_open_ticket(ticket):
+        return api_error("Access denied", 403)
+
+    return jsonify(ticket_to_dict(ticket))
+
+
+@app.route("/api/tickets", methods=["POST"])
+@api_login_required
+def api_create_ticket():
+    if current_user.is_admin:
+        return api_error("Admins cannot create tickets", 403)
+
+    data = request.get_json(silent=True)
+    if not data:
+        return api_error("JSON body is required", 400)
+
+    title = data.get("title")
+    text = data.get("text")
+    category = data.get("category")
+    priority = data.get("priority")
+
+    if not title or not text or not category or not priority:
+        return api_error("Required fields: title, text, category, priority", 400)
+
+    ticket = Ticket(
+        title=title,
+        text=text,
+        category=category,
+        priority=priority,
+        status="Новая",
+        admin_answer="",
+        user_id=current_user.id
+    )
+    db.session.add(ticket)
+    db.session.commit()
+
+    return jsonify(ticket_to_dict(ticket)), 201
+
+
+@app.route("/api/tickets/<int:ticket_id>", methods=["DELETE"])
+@api_login_required
+def api_delete_ticket(ticket_id):
+    ticket = db.session.get(Ticket, ticket_id)
+    if not ticket:
+        return api_error("Ticket not found", 404)
+
+    if not can_open_ticket(ticket):
+        return api_error("Access denied", 403)
+
+    ticket_id = ticket.id
+    delete_ticket_file(ticket)
+    db.session.delete(ticket)
+    db.session.commit()
+
+    return jsonify({"message": "Ticket deleted", "id": ticket_id})
+
+
+@app.errorhandler(404)
+def not_found(error):
+    if request.path.startswith("/api/"):
+        return api_error("Not found", 404)
+
+    return render_template(
+        "error.html",
+        title="404",
+        code=404,
+        message="Страница не найдена"
+    ), 404
+
+
+@app.errorhandler(403)
+def access_denied(error):
+    if request.path.startswith("/api/"):
+        return api_error("Access denied", 403)
+
+    return render_template(
+        "error.html",
+        title="403",
+        code=403,
+        message="Нет доступа"
+    ), 403
 
 
 def update_old_db():
@@ -283,12 +445,6 @@ def update_old_db():
             )
             db.session.commit()
 
-        admin = User.query.filter_by(is_admin=True).first()
-        first_user = User.query.order_by(User.id).first()
-        if first_user and not admin:
-            first_user.is_admin = True
-            db.session.commit()
-
     if "ticket" in tables:
         columns = [
             column["name"] for column in inspector.get_columns("ticket")
@@ -296,6 +452,12 @@ def update_old_db():
         if "file_name" not in columns:
             db.session.execute(
                 text("ALTER TABLE ticket ADD COLUMN file_name VARCHAR(200)")
+            )
+            db.session.commit()
+
+        if "admin_answer" not in columns:
+            db.session.execute(
+                text("ALTER TABLE ticket ADD COLUMN admin_answer TEXT DEFAULT ''")
             )
             db.session.commit()
 

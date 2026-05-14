@@ -7,7 +7,9 @@
     {% else %}
         <h1>Мои заявки</h1>
     {% endif %}
-    <a class="btn btn-primary" href="{{ url_for('new_ticket') }}">Новая заявка</a>
+    {% if not current_user.is_admin %}
+        <a class="btn btn-primary" href="{{ url_for('new_ticket') }}">Новая заявка</a>
+    {% endif %}
 </div>
 
 {% if tickets %}

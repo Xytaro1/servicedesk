@@ -32,19 +32,29 @@
         </p>
     {% endif %}
 
+    <hr>
+    <p><b>Ответ администратора:</b></p>
+    {% if ticket.admin_answer %}
+        <p class="ticket-text">{{ ticket.admin_answer }}</p>
+    {% else %}
+        <p class="text-muted">Администратор пока не ответил на заявку.</p>
+    {% endif %}
+
     {% if current_user.is_admin %}
         <hr>
-        <form class="row g-2 align-items-end mb-3"
+        <form class="mb-3"
               method="post"
               action="{{ url_for('update_ticket_status', ticket_id=ticket.id) }}">
             {{ form.hidden_tag() }}
-            <div class="col-md-4">
+            <div class="mb-3">
                 {{ form.status.label(class="form-label") }}
                 {{ form.status(class="form-select") }}
             </div>
-            <div class="col-md-2">
-                {{ form.submit(class="btn btn-primary w-100") }}
+            <div class="mb-3">
+                {{ form.admin_answer.label(class="form-label") }}
+                {{ form.admin_answer(class="form-control", rows="5") }}
             </div>
+            {{ form.submit(class="btn btn-primary") }}
         </form>
 
         <form method="post"

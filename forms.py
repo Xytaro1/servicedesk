@@ -8,6 +8,14 @@ from wtforms.validators import DataRequired, Email, EqualTo, Length
 class RegisterForm(FlaskForm):
     name = StringField("Имя", validators=[DataRequired(), Length(max=100)])
     email = EmailField("Email", validators=[DataRequired(), Email()])
+    role = SelectField(
+        "Роль",
+        choices=[
+            ("user", "Пользователь"),
+            ("admin", "Администратор"),
+        ],
+        validators=[DataRequired()]
+    )
     password = PasswordField(
         "Пароль",
         validators=[DataRequired(), Length(min=4)]
@@ -77,6 +85,7 @@ class StatusForm(FlaskForm):
         ],
         validators=[DataRequired()]
     )
+    admin_answer = TextAreaField("Ответ администратора")
     submit = SubmitField("Сохранить")
 
 

@@ -29,6 +29,7 @@ class Ticket(db.Model):
     category = db.Column(db.String(80), nullable=False)
     priority = db.Column(db.String(30), nullable=False)
     status = db.Column(db.String(30), nullable=False, default="Новая")
+    admin_answer = db.Column(db.Text, default="")
     file_name = db.Column(db.String(200))
     created_date = db.Column(db.DateTime, default=datetime.now)
 

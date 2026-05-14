@@ -7,13 +7,14 @@
     <p>Ваш email: {{ current_user.email }}</p>
     {% if current_user.is_admin %}
         <p>Роль: администратор</p>
-    {% endif %}
-    <p>Количество ваших заявок: {{ tickets_count }}</p>
-
-    <a class="btn btn-primary" href="{{ url_for('new_ticket') }}">Создать заявку</a>
-    <a class="btn btn-outline-primary" href="{{ url_for('tickets') }}">Посмотреть заявки</a>
-    {% if current_user.is_admin %}
-        <a class="btn btn-outline-dark" href="{{ url_for('admin') }}">Админ-панель</a>
+        <div class="alert alert-info">
+            Вы вошли как администратор. Перейдите в админ-панель для обработки заявок.
+        </div>
+        <a class="btn btn-primary" href="{{ url_for('admin') }}">Админ-панель</a>
+    {% else %}
+        <p>Количество ваших заявок: {{ tickets_count }}</p>
+        <a class="btn btn-primary" href="{{ url_for('new_ticket') }}">Создать заявку</a>
+        <a class="btn btn-outline-primary" href="{{ url_for('tickets') }}">Посмотреть заявки</a>
     {% endif %}
 </section>
 {% endblock %}
